@@ -2,6 +2,8 @@
 
 Dump quarantined files from Windows Defender
 
+![](demo.gif)
+
 ## Usage
 
 ### On Windows
