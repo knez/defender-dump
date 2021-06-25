@@ -78,7 +78,7 @@ def unpack_malware(f):
 
     return (malfile, malfile_len)
 
-def dump_entries(basedir, entries, outdir):
+def dump_entries(basedir, entries):
 
     tar = tarfile.open('quarantine.tar', 'w')
 
@@ -150,9 +150,9 @@ def main(args):
 
     entries = parse_entries(basedir)
 
-    if args.outdir is not None:
+    if args.dump:
         # export quarantine files
-        dump_entries(basedir, entries, args.outdir)
+        dump_entries(basedir, entries)
     else:
         # display quarantine files
         for entry in entries:
@@ -167,9 +167,8 @@ if __name__ == '__main__':
             help='root directory where Defender is installed (example C:\)'
     )
     parser.add_argument(
-            '-d', '--dump', dest='outdir',
-            nargs='?', const='quarantine', type=pathlib.Path,
-            help='dump files to folder (default: quarantine)'
+            '-d', '--dump', action='store_true',
+            help='dump all entries into tar archive (quarantine.tar)'
     )
 
     main(parser.parse_args())
