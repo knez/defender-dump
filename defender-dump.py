@@ -7,9 +7,11 @@ By Nikola Knežević - 2021
 Inspired by https://github.com/ernw/quarantine-formats
 '''
 
+import io
 import struct
 import argparse
 import pathlib
+import tarfile
 
 def mse_ksa():
     # hardcoded key obtained from mpengine.dll
@@ -74,11 +76,11 @@ def unpack_malware(f):
     malfile_len = struct.unpack_from('<Q', decrypted, sd_len + 0x1C)[0]
     malfile = decrypted[header_len:header_len + malfile_len]
 
-    return malfile
+    return (malfile, malfile_len)
 
 def dump_entries(basedir, entries, outdir):
 
-    outdir.mkdir(exist_ok=True)
+    tar = tarfile.open('quarantine.tar', 'w')
 
     for path, hash in entries:
         quarfile = basedir / 'ResourceData' / hash[:2] / hash
@@ -88,11 +90,16 @@ def dump_entries(basedir, entries, outdir):
 
         with open(quarfile, 'rb') as f:
 
-            print("Exporting %s into %s" % (path.name, outdir))
-            malfile = unpack_malware(f)
+            print(f'Exporting {path.name}')
+            malfile, malfile_len = unpack_malware(f)
 
-            with open(outdir / path.name, 'wb') as outfile:
-                outfile.write(malfile)
+            tarinfo = tarfile.TarInfo(path.name)
+            tarinfo.size = malfile_len
+            tar.addfile(tarinfo, io.BytesIO(malfile))
+
+    tar.close()
+
+    print("File 'quarantine.tar' successfully created")
 
 def get_entry(data):
 
