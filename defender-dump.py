@@ -66,6 +66,16 @@ def rc4_decrypt(data):
 
     return out
 
+def unpack_malware(f):
+
+    decrypted = rc4_decrypt(f.read())
+    sd_len = struct.unpack_from('<I', decrypted, 0x8)[0]
+    header_len = 0x28 + sd_len
+    malfile_len = struct.unpack_from('<Q', decrypted, sd_len + 0x1C)[0]
+    malfile = decrypted[header_len:header_len + malfile_len]
+
+    return malfile
+
 def dump_entries(basedir, entries, outdir):
 
     outdir.mkdir(exist_ok=True)
@@ -79,12 +89,7 @@ def dump_entries(basedir, entries, outdir):
         with open(quarfile, 'rb') as f:
 
             print("Exporting %s into %s" % (path.name, outdir))
-
-            decrypted = rc4_decrypt(f.read())
-            sd_len = struct.unpack_from('<I', decrypted, 0x8)[0]
-            header_len = 0x28 + sd_len
-            malfile_len = struct.unpack_from('<Q', decrypted, sd_len + 0x1C)[0]
-            malfile = decrypted[header_len:header_len + malfile_len]
+            malfile = unpack_malware(f)
 
             with open(outdir / path.name, 'wb') as outfile:
                 outfile.write(malfile)
