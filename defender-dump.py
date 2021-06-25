@@ -72,43 +72,43 @@ def dump_entries(basedir, entries, outdir):
 
     for path, hash in entries:
         quarfile = basedir / 'ResourceData' / hash[:2] / hash
-       
+
         if not quarfile.exists():
             continue
 
         with open(quarfile, 'rb') as f:
-  
+
             print("Exporting %s into %s" % (path.name, outdir))
-            
+
             decrypted = rc4_decrypt(f.read())
             sd_len = struct.unpack_from('<I', decrypted, 0x8)[0]
             header_len = 0x28 + sd_len
             malfile_len = struct.unpack_from('<Q', decrypted, sd_len + 0x1C)[0]
             malfile = decrypted[header_len:header_len + malfile_len]
-            
+
             with open(outdir / path.name, 'wb') as outfile:
                 outfile.write(malfile)
- 
+
 def get_entry(data):
 
     # extract path as a null-terminated UTF-16 string
     pos = data.find(b'\x00\x00\x00') + 1
     path_str = data[:pos].decode('utf-16le')
- 
+
     # normalize the path
     if path_str[2:4] == '?\\':
         path_str = path_str[4:]
 
     path = pathlib.PureWindowsPath(path_str)
- 
+
     pos += 4  # skip number of entries field
     type_len = data[pos:].find(b'\x00')
     type = data[pos:pos + type_len].decode()  # get entry Type (UTF-8)
     pos += type_len + 1
     pos += (4 - pos) % 4  # skip padding bytes
-    pos += 4  # skip additional metadata 
+    pos += 4  # skip additional metadata
     hash = data[pos:pos + 20].hex().upper()
-    
+
     return (path, hash, type)
 
 def parse_entries(basedir):
@@ -118,18 +118,18 @@ def parse_entries(basedir):
         with open(guid, 'rb') as f:
             header = rc4_decrypt(f.read(0x3c))
             data1_len, data2_len = struct.unpack_from('<II', header, 0x28)
-            
+
             f.seek(data1_len, 1) # skip data1 section
-            
+
             data2 = rc4_decrypt(f.read(data2_len))
             cnt = struct.unpack_from('<I', data2)[0]
             offsets = struct.unpack_from('<' + str(cnt) + 'I', data2, 0x4)
-            
+
             for o in offsets:
                 path, hash, type = get_entry(data2[o:])
                 if type == 'file':
                     results.append((path, hash))
-                
+
     return results
 
 def main(args):
@@ -143,7 +143,7 @@ def main(args):
         dump_entries(basedir, entries, args.outdir)
     else:
         # display quarantine files
-        for entry in entries: 
+        for entry in entries:
             print(entry[0])
 
 if __name__ == '__main__':
@@ -156,9 +156,8 @@ if __name__ == '__main__':
     )
     parser.add_argument(
             '-d', '--dump', dest='outdir',
-            nargs='?', const='quarantine', type=pathlib.Path, 
+            nargs='?', const='quarantine', type=pathlib.Path,
             help='dump files to folder (default: quarantine)'
     )
- 
-    main(parser.parse_args())
 
+    main(parser.parse_args())
