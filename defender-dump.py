@@ -86,18 +86,18 @@ def dump_entries(basedir, entries):
 
     tar = tarfile.open('quarantine.tar', 'w')
 
-    for path, hash in entries:
-        quarfile = basedir / 'ResourceData' / hash[:2] / hash
+    for file_rec in entries:
+        quarfile = basedir / 'ResourceData' / file_rec.hash[:2] / file_rec.hash
 
         if not quarfile.exists():
             continue
 
         with open(quarfile, 'rb') as f:
 
-            print(f'Exporting {path.name}')
+            print(f'Exporting {file_rec.path.name}')
             malfile, malfile_len = unpack_malware(f)
 
-            tarinfo = tarfile.TarInfo(path.name)
+            tarinfo = tarfile.TarInfo(file_rec.path.name)
             tarinfo.size = malfile_len
             tar.addfile(tarinfo, io.BytesIO(malfile))
 
