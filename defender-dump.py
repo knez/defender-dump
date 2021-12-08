@@ -164,7 +164,7 @@ def main(args):
         # display quarantine files
         detection_max_len = max([len(x[2]) for x in entries])
         for entry in entries:
-            print(entry.hash, entry.filetime, f"{entry.detection:<{detection_max_len}}", entry.path)
+            print(entry.filetime, f"{entry.detection:<{detection_max_len}}", entry.path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
