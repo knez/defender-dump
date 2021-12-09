@@ -10,8 +10,12 @@ Inspired by https://github.com/ernw/quarantine-formats
 import io
 import struct
 import argparse
+import datetime
 import pathlib
 import tarfile
+
+from collections import namedtuple
+file_record = namedtuple("file_record", "path hash detection filetime")
 
 def mse_ksa():
     # hardcoded key obtained from mpengine.dll
@@ -82,18 +86,18 @@ def dump_entries(basedir, entries):
 
     tar = tarfile.open('quarantine.tar', 'w')
 
-    for path, hash in entries:
-        quarfile = basedir / 'ResourceData' / hash[:2] / hash
+    for file_rec in entries:
+        quarfile = basedir / 'ResourceData' / file_rec.hash[:2] / file_rec.hash
 
         if not quarfile.exists():
             continue
 
         with open(quarfile, 'rb') as f:
 
-            print(f'Exporting {path.name}')
+            print(f'Exporting {file_rec.path.name}')
             malfile, malfile_len = unpack_malware(f)
 
-            tarinfo = tarfile.TarInfo(path.name)
+            tarinfo = tarfile.TarInfo(file_rec.path.name)
             tarinfo.size = malfile_len
             tar.addfile(tarinfo, io.BytesIO(malfile))
 
@@ -131,7 +135,10 @@ def parse_entries(basedir):
             header = rc4_decrypt(f.read(0x3c))
             data1_len, data2_len = struct.unpack_from('<II', header, 0x28)
 
-            f.seek(data1_len, 1) # skip data1 section
+            data1 = rc4_decrypt(f.read(data1_len))
+            filetime, = struct.unpack('<Q', data1[0x20:0x28])
+            filetime = datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=filetime // 10 - 11644473600000000)
+            detection = data1[0x34:].decode('utf8')
 
             data2 = rc4_decrypt(f.read(data2_len))
             cnt = struct.unpack_from('<I', data2)[0]
@@ -140,7 +147,7 @@ def parse_entries(basedir):
             for o in offsets:
                 path, hash, type = get_entry(data2[o:])
                 if type == 'file':
-                    results.append((path, hash))
+                    results.append(file_record(path, hash, detection, filetime))
 
     return results
 
@@ -155,8 +162,9 @@ def main(args):
         dump_entries(basedir, entries)
     else:
         # display quarantine files
+        detection_max_len = max([len(x[2]) for x in entries])
         for entry in entries:
-            print(entry[0])
+            print(entry.filetime, f"{entry.detection:<{detection_max_len}}", entry.path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
