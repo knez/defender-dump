@@ -8,6 +8,8 @@ Dump quarantined files from Windows Defender
 
 Forensically list and extract quarantined files from a mounted disk. Extracted files are put into a tar archive in order to prevent accidental triggering of Defender Real-time protection.
 
+**Update:** for a more robust version supporting multiple AVs see [maldump](https://github.com/NUKIB/maldump)
+
 ## Usage
 
 ### On Windows
